@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MindTrace — Outsmart the Room</title>
+<style>
+:root{--bg:#080b11;--panel:#111722;--card:#171e2b;--line:#2b3547;--text:#f4f7fb;--muted:#9ca8ba;--accent:#f2b75f;--good:#62d69a;--bad:#ee7180}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -10%,#263148 0,#080b11 48%);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+.wrap{width:min(1060px,92%);margin:auto;padding:28px 0 50px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.brand{font-size:22px;font-weight:900;letter-spacing:.06em}.brand span{color:var(--accent)}.roomtag{display:none;background:var(--panel);border:1px solid var(--line);padding:8px 12px;border-radius:10px;color:var(--muted)}.roomtag b{color:var(--text);letter-spacing:.12em}
+.panel{background:rgba(17,23,34,.94);border:1px solid var(--line);border-radius:18px;padding:25px;box-shadow:0 20px 70px #0005}.hidden{display:none!important}.eyebrow,.small{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}h1{font-size:clamp(32px,6vw,54px);line-height:1.02;margin:8px 0 12px}h2{margin:0 0 8px}.sub{color:var(--muted);max-width:760px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:22px}.field{display:grid;gap:7px;margin:14px 0}.field label{font-size:13px;color:var(--muted)}input{width:100%;padding:13px 14px;background:#0b1018;border:1px solid var(--line);border-radius:10px;color:var(--text);outline:none}input:focus{border-color:var(--accent)}.btn{padding:12px 17px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-weight:800}.btn.primary{background:var(--accent);border-color:var(--accent);color:#17130c}.btn:disabled{opacity:.45;cursor:not-allowed}.actions{display:flex;gap:10px;flex-wrap:wrap}.notice{margin-top:15px;padding:11px 13px;border:1px solid var(--line);background:#0d131d;border-radius:10px;color:var(--muted)}.error{color:#ff9da6;border-color:#68313a}
+.players{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:18px}.player{background:#0d131d;border:1px solid var(--line);border-radius:12px;padding:12px}.player .score{float:right;color:var(--accent);font-weight:800}.player .meta{font-size:12px;color:var(--muted)}
+.roundhead{display:flex;justify-content:space-between;gap:12px;align-items:center}.timer{font-size:31px;font-weight:900;color:var(--accent)}.role{display:inline-block;margin-top:5px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.symbols{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0}.symbol{min-height:125px;border:1px solid var(--line);border-radius:14px;background:#0d131d;color:var(--text);font-size:19px;font-weight:900}.symbol span{display:block;font-size:36px;margin-bottom:5px}.symbol small{color:var(--muted);font-size:12px}.symbol:hover:not(:disabled),.symbol:focus{border-color:var(--accent)}.symbol.locked{border-color:var(--good);background:#10251a}.clues{display:grid;gap:10px;margin:18px 0}.clue{padding:15px;background:#0d131d;border-left:3px solid var(--accent);border-radius:8px}.guessgrid{display:grid;gap:9px}.guess{display:flex;justify-content:space-between;width:100%;padding:13px 15px;border:1px solid var(--line);border-radius:10px;background:#0d131d;color:var(--text);text-align:left}.guess:hover{border-color:var(--accent)}.reveal{padding:20px;background:#0d131d;border:1px solid var(--line);border-radius:14px}.good{color:var(--good)}.bad{color:var(--bad)}.row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #252d3a}.row b{color:var(--accent)}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.symbols{grid-template-columns:repeat(2,1fr)}.panel{padding:18px}.wrap{padding-top:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top"><div class="brand">MIND<span>TRACE</span></div><div id="roomTag" class="roomtag">ROOM <b id="roomCode"></b></div></header>
+
+<section id="home" class="panel">
+<div class="eyebrow">REAL-TIME SOCIAL DEDUCTION · 2–8 PLAYERS</div>
+<h1>Outsmart the Room.</h1>
+<p class="sub">Read the pattern. Hide your choice. One player becomes the Detective and tries to identify the hidden Target.</p>
+<div class="grid">
+<div><h2>Create a room</h2><div class="field"><label>Display name</label><input id="createName" maxlength="20" placeholder="Your name"></div><button id="createBtn" class="btn primary">Create room</button></div>
+<div><h2>Join a room</h2><div class="field"><label>Display name</label><input id="joinName" maxlength="20" placeholder="Your name"></div><div class="field"><label>Room code</label><input id="joinCode" maxlength="6" placeholder="ABC123"></div><button id="joinBtn" class="btn">Join room</button></div>
+</div><div id="homeMsg" class="notice hidden"></div>
+</section>
+
+<section id="lobby" class="panel hidden">
+<div class="eyebrow">ROOM LOBBY</div><h2 id="lobbyTitle">Waiting for players</h2><p class="sub">Share the room code with the other player. The host starts when at least two players have joined.</p>
+<div id="playersLobby" class="players"></div><div class="actions" style="margin-top:18px"><button id="startBtn" class="btn primary">Start game</button></div><div id="lobbyMsg" class="notice"></div>
+</section>
+
+<section id="game" class="panel hidden">
+<div class="roundhead"><div><div class="small">ROUND <span id="roundNo">1</span> / 5</div><h2 id="stageTitle">Make your choice</h2><span id="roleBadge" class="role">Player</span></div><div id="timer" class="timer">45</div></div>
+<div id="stage"></div><div id="gameMsg" class="notice hidden"></div>
+</section>
+
+<section id="finished" class="panel hidden">
+<div class="eyebrow">CASE CLOSED</div><h1>Final scores</h1><p class="sub">Five rounds complete.</p><div id="finalScores"></div>
+<div class="actions" style="margin-top:18px"><button id="restartBtn" class="btn primary">Play again</button></div>
+</section>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket=io(),$=id=>document.getElementById(id);
+const labels={circle:"Circle",triangle:"Triangle",star:"Star",square:"Square"};
+let me={choice:null};
+function show(id){["home","lobby","game","finished"].forEach(x=>$(x).classList.toggle("hidden",x!==id))}
+function msg(id,t,error=false){const e=$(id);e.textContent=t;e.classList.remove("hidden","error");if(error)e.classList.add("error")}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+function renderPlayers(el,ps){el.innerHTML=ps.map(p=>`<div class="player"><span class="score">${p.score}</span><b>${esc(p.name)}</b><div class="meta">${p.isHost?"HOST · ":""}${p.connected?"ONLINE":"RECONNECTING"}</div></div>`).join("")}
+function setRoom(c){$("roomCode").textContent=c;$("roomTag").style.display="block"}
+$("createBtn").onclick=()=>socket.emit("room:create",{name:$("createName").value});
+$("joinBtn").onclick=()=>socket.emit("room:join",{name:$("joinName").value,code:$("joinCode").value});
+$("startBtn").onclick=()=>socket.emit("game:start");
+$("restartBtn").onclick=()=>socket.emit("game:restart");
+
+socket.on("room:joined",d=>{setRoom(d.code);show("lobby")});
+socket.on("error:msg",e=>msg("homeMsg",e,true));
+socket.on("room:update",s=>{
+setRoom(s.code);
+if(s.phase==="lobby"){show("lobby");renderPlayers($("playersLobby"),s.players);$("startBtn").disabled=!(s.hostId===socket.id&&s.players.length>=2);$("lobbyTitle").textContent=`${s.players.length}/8 players in room`;msg("lobbyMsg",s.players.length<2?"Need at least 2 players.":"Host can start the game.")}
+if(["choose","deduce","reveal"].includes(s.phase)){show("game");$("roundNo").textContent=s.round}
+if(s.phase==="finished"){show("finished");renderFinal(s.players)}
+});
+socket.on("round:started",d=>{
+me.choice=null;$("roundNo").textContent=d.round;$("timer").textContent="45";$("roleBadge").textContent=d.role==="detective"?"Detective":"Player";
+$("stageTitle").textContent=d.role==="detective"?"Observe the room":"Make your hidden choice";
+if(d.role==="detective")$("stage").innerHTML=`<p class="sub">You are the Detective. Everyone else is choosing. Study the room and wait for the clues.</p><div class="notice">The Target is hidden from you.</div>`;
+else $("stage").innerHTML=`<p class="sub">${d.isTarget?"You are the hidden Target. Stay unpredictable.":"Choose one symbol. Your choice is private."}</p><div class="symbols">${d.symbols.map(s=>`<button class="symbol" data-symbol="${s.id}"><span>${{circle:"●",triangle:"▲",star:"★",square:"■"}[s.id]}</span><small>${s.label}</small></button>`).join("")}</div>`;
+document.querySelectorAll(".symbol").forEach(b=>b.onclick=()=>choose(b.dataset.symbol));
+});
+function choose(c){if(me.choice)return;me.choice=c;socket.emit("choice:submit",{choice:c});document.querySelectorAll(".symbol").forEach(b=>b.disabled=true);document.querySelector(`[data-symbol="${c}"]`)?.classList.add("locked");msg("gameMsg",`Choice locked: ${labels[c]}.`)}
+socket.on("round:timer",n=>$("timer").textContent=Math.max(0,n));
+socket.on("round:deduce",d=>{
+$("stageTitle").textContent=d.role==="detective"?"Make your deduction":"Watch the Detective";$("roleBadge").textContent=d.role==="detective"?"Detective":"Spectator";$("timer").textContent="25";
+if(d.role==="detective"){
+$("stage").innerHTML=`<p class="sub">Three clues. One target. Pick the player you believe is the hidden Target.</p><div class="clues">${d.clues.map(c=>`<div class="clue">${esc(c)}</div>`).join("")}</div><div class="guessgrid">${d.choices.map(p=>`<button class="guess" data-player="${p.id}"><b>${esc(p.name)}</b><span>Choose</span></button>`).join("")}</div>`;
+document.querySelectorAll(".guess").forEach(b=>b.onclick=()=>{socket.emit("detective:guess",{playerId:b.dataset.player});document.querySelectorAll(".guess").forEach(x=>x.disabled=true)});
+}else $("stage").innerHTML=`<p class="sub">The Detective is studying the clues. Keep your poker face.</p><div class="clues">${d.clues.map(c=>`<div class="clue">${esc(c)}</div>`).join("")}</div>`;
+});
+socket.on("round:reveal",r=>{
+$("stageTitle").textContent="Reveal";$("timer").textContent="—";const mine=r.choices.find(x=>x.id===socket.id);
+$("stage").innerHTML=`<div class="reveal"><h2 class="${r.correct?"good":"bad"}">${r.correct?"Detective found the Target.":"The Detective missed."}</h2><p>The hidden Target was <b>${esc(r.targetName)}</b>, who chose <b>${labels[r.targetChoice]}</b>.</p><p class="small">Your choice: ${mine?labels[mine.choice]:"No choice"}.</p><p class="small">Next round starts automatically.</p></div>`;
+});
+socket.on("game:finished",d=>{show("finished");renderFinal(d.players)});
+function renderFinal(ps){$("finalScores").innerHTML=[...ps].sort((a,b)=>b.score-a.score).map((p,i)=>`<div class="row"><span>${i+1}. ${esc(p.name)}</span><b>${p.score}</b></div>`).join("")}
+</script>
+</body>
+</html>
